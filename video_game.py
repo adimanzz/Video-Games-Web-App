@@ -8,6 +8,8 @@ import streamlit as st
 import pandas as pd
 pd.options.display.max_columns = 500
 import numpy as np
+from sqlalchemy import create_engine
+
 import seaborn as sns
 import plotly.express as px
 from plotly.subplots import make_subplots
@@ -16,14 +18,11 @@ import plotly
 from statsmodels.tsa.arima_model import ARIMA
 
 import tensorflow.compat.v1 as tf
-
-
 from tensorflow import Graph
 #from tensorflow import Session
 from keras.models import load_model
 import keras.backend.tensorflow_backend as tb
 tb._SYMBOLIC_SCOPE.value = True
-
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 #config = ConfigProto()
@@ -42,18 +41,23 @@ from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from wordcloud import WordCloud
 
-@st.cache(persist=False)
+@st.cache(persist=False, allow_output_mutation = True)
 def load_data():
+    
+    engine = create_engine('sqlite:///database/videogames.db', echo=True)
+    sqlite_connection = engine.connect()
+    
+    
     gametoix = pd.read_pickle('game_index_dictionaries/gametoix.pkl')
     
     ixtogame = pd.read_pickle('game_index_dictionaries/ixtogame.pkl')
         
     similarity_matrix = pd.read_pickle('similarity_matrix.pkl')
     
-    url = pd.read_csv('vgsales_url.csv')
+    url = pd.read_sql("select * from vgsales_url", sqlite_connection)
     #vg_url['Year'] = vg_url['Year'].apply(lambda x: str(x).replace('.0',''))
     
-    sales = pd.read_csv('vgsales.csv')
+    sales = pd.read_sql("select * from vgsales", sqlite_connection)
     sales = sales.dropna()
     
     sales_graph = pd.read_pickle('sales_graph.pkl')
@@ -66,13 +70,13 @@ def load_data():
     
     playtime_graph = pd.read_pickle('playtime_graph.pkl') 
     
-    user = pd.read_csv('user_games.csv')
+    user = pd.read_sql("select * from user_games", sqlite_connection)
     user.columns = ['user','game','activity','playtime','0']
     user.drop(['0'], 1, inplace = True)    
     user = user.loc[user['activity'] != 'purchase']    
     user.drop(['activity','user'], 1, inplace = True)
     
-    steam = pd.read_csv('steamgames.csv')
+    steam = pd.read_sql("select * from steamgames", sqlite_connection)
    
     
     return gametoix, ixtogame, similarity_matrix,  url, sales, sales_graph, sales_graph2, ratings,prices_graph, playtime_graph, user, steam
